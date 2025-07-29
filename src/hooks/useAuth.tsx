@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { User, Session, AuthError } from '@supabase/supabase-js';
+import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 import toast from 'react-hot-toast';
 
@@ -20,14 +20,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
     });
 
-    // Listen for auth changes
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -40,34 +38,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signUp = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-    });
-    
+    const { error } = await supabase.auth.signUp({ email, password });
     if (error) {
-      throw error;
+      let msg = error.message;
+      if (msg.includes('User already registered')) {
+        msg = 'This email is already registered. Please sign in instead.';
+      }
+      toast.error(msg);
+      throw new Error(msg);
     }
-    
     toast.success('Account created successfully!');
   };
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-    
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) {
-      throw error;
+      let msg = error.message;
+      if (msg.includes('Invalid login credentials')) {
+        msg = 'Incorrect email or password.';
+      }
+      toast.error(msg);
+      throw new Error(msg);
     }
-    
     toast.success('Welcome back!');
   };
 
   const signOut = async () => {
     const { error } = await supabase.auth.signOut();
     if (error) {
+      toast.error(error.message);
       throw error;
     }
     toast.success('Signed out successfully');

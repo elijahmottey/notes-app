@@ -4,6 +4,7 @@ import { AuthProvider } from './hooks/useAuth';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { AuthForm } from './components/AuthForm';
 import { Dashboard } from './pages/Dashboard';
+import { NoteDetail } from './components/NoteDetail'; // Create this page
 
 function App() {
   return (
@@ -20,6 +21,7 @@ function App() {
                 </ProtectedRoute>
               } 
             />
+            <Route path="/notes/:id" element={<NoteDetail />} />
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
           </Routes>
           <Toaster 

@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { Mail, Lock, Eye, EyeOff, Loader2 } from 'lucide-react';
-import clsx from 'clsx';
+import { clsx } from 'clsx';
+import { useNavigate } from 'react-router-dom';
 
 export function AuthForm() {
   const [isSignUp, setIsSignUp] = useState(false);
@@ -9,11 +10,21 @@ export function AuthForm() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const { signUp, signIn } = useAuth();
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const { signUp, signIn, user } = useAuth();
+  const navigate = useNavigate();
+
+  // Redirect to dashboard if authenticated
+  useEffect(() => {
+    if (user) {
+      navigate('/dashboard', { replace: true });
+    }
+  }, [user, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    setErrorMsg(null);
 
     try {
       if (isSignUp) {
@@ -22,6 +33,7 @@ export function AuthForm() {
         await signIn(email, password);
       }
     } catch (error: any) {
+      setErrorMsg(error?.message || 'Authentication failed');
       console.error('Auth error:', error);
     } finally {
       setLoading(false);
@@ -40,12 +52,19 @@ export function AuthForm() {
               {isSignUp ? 'Create Account' : 'Welcome Back'}
             </h1>
             <p className="text-gray-600">
-              {isSignUp 
+              {isSignUp
                 ? 'Sign up to start taking notes'
                 : 'Sign in to access your notes'
               }
             </p>
           </div>
+
+          {/* Show error message if present */}
+          {errorMsg && (
+            <div className="mb-4 text-red-600 text-center" aria-live="polite">
+              {errorMsg}
+            </div>
+          )}
 
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
@@ -117,7 +136,7 @@ export function AuthForm() {
               onClick={() => setIsSignUp(!isSignUp)}
               className="text-blue-600 hover:text-blue-700 font-medium transition-colors"
             >
-              {isSignUp 
+              {isSignUp
                 ? 'Already have an account? Sign in'
                 : "Don't have an account? Sign up"
               }

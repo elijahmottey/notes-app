@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { X, Save } from 'lucide-react';
 import { Note } from '../hooks/useNotes';
-import clsx from 'clsx';
+import {clsx} from 'clsx';
 
 interface NoteEditorProps {
   note?: Note;
