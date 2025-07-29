@@ -23,6 +23,8 @@ Edit
 📄 README.md
 markdown
 Copy
+![App Screenshot](Screenshot_29-7-2025_23732_us-east-1.console.aws.amazon.com.png)
+
 
 ![App Screenshot](./Screenshot_29-7-2025_23732_us-east-1.console.aws.amazon.com.png)
 Edit
