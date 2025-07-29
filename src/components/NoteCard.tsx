@@ -1,18 +1,29 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Edit, Trash2, MoreVertical } from 'lucide-react';
 import { Note } from '../hooks/useNotes';
 import { clsx } from 'clsx';
 import { useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
 
 interface NoteCardProps {
   note: Note;
   onEdit: (note: Note) => void;
   onDelete: (id: string) => void;
+  isNew?: boolean;
 }
 
-export function NoteCard({ note, onEdit, onDelete }: NoteCardProps) {
+export function NoteCard({ note, onEdit, onDelete, isNew = false }: NoteCardProps) {
   const [showMenu, setShowMenu] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [highlight, setHighlight] = useState(isNew);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (highlight) {
+      const timer = setTimeout(() => setHighlight(false), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [highlight]);
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -25,92 +36,119 @@ export function NoteCard({ note, onEdit, onDelete }: NoteCardProps) {
     }).format(date);
   };
 
-  const truncateContent = (content: string, maxLength: number = 150) => {
-    if (content.length <= maxLength) return content;
-    return content.substring(0, maxLength) + '...';
+  const truncateContent = (content: string, maxLength = 150) => {
+    return content.length <= maxLength ? content : content.slice(0, maxLength) + '...';
   };
 
-  // Confirm before deleting
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (window.confirm('Are you sure you want to delete this note?')) {
-      onDelete(note.id);
-      setShowMenu(false);
+      setDeleting(true);
+      try {
+        await onDelete(note.id);
+      } finally {
+        setDeleting(false);
+        setShowMenu(false);
+      }
     }
   };
 
-  // Handle card click to navigate to note detail
   const handleCardClick = (e: React.MouseEvent) => {
-    // Prevent navigation if clicking on menu buttons
-    if ((e.target as HTMLElement).closest('button')) return;
+    const target = e.target as HTMLElement;
+    if (
+      target.closest('button') ||
+      target.closest('.note-dropdown') ||
+      target.closest('.note-menu')
+    )
+      return;
+
     navigate(`/notes/${note.id}`);
   };
 
   return (
-    <div
-      className={clsx(
-        "bg-gradient-to-br from-yellow-100 via-pink-100 to-purple-100",
-        "rounded-xl shadow-md border border-yellow-200 p-6",
-        "hover:shadow-lg transition-shadow group cursor-pointer",
-        "relative overflow-hidden"
-      )}
+    <motion.div
+      layout
+      initial={{ scale: 0.95, opacity: 0 }}
+      animate={{ scale: 1, opacity: 1 }}
+      transition={{ duration: 0.4, ease: 'easeOut' }}
       onClick={handleCardClick}
+      className={clsx(
+        'relative group cursor-pointer overflow-hidden rounded-xl border p-6 shadow-md transition-shadow hover:shadow-xl',
+        'bg-gradient-to-br from-yellow-100 via-pink-100 to-purple-100',
+        highlight && 'ring-2 ring-blue-400'
+      )}
     >
-      {/* Decorative background shapes */}
-      <div className="absolute -top-8 -right-8 w-32 h-32 bg-yellow-200 opacity-30 rounded-full pointer-events-none"></div>
-      <div className="absolute -bottom-8 -left-8 w-24 h-24 bg-pink-200 opacity-20 rounded-full pointer-events-none"></div>
-      {/* Main content */}
-      <div className="flex items-start justify-between mb-3 relative z-10">
-        <h3 className="text-lg font-semibold text-gray-900 line-clamp-1">
-          {note.title}
-        </h3>
-        <div className="relative">
-          <button
-            onClick={() => setShowMenu(!showMenu)}
-            className="p-1 text-gray-400 hover:text-gray-600 opacity-0 group-hover:opacity-100 transition-opacity"
+      {/* Decorative Circles */}
+      <div className="absolute -top-8 -right-8 w-32 h-32 bg-yellow-200 opacity-30 rounded-full pointer-events-none z-0" />
+      <div className="absolute -bottom-8 -left-8 w-24 h-24 bg-pink-200 opacity-20 rounded-full pointer-events-none z-0" />
+
+      {/* Dropdown menu */}
+      <div className="absolute top-4 right-4 z-[9999] note-menu">
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            setShowMenu(!showMenu);
+          }}
+          className="p-1 text-gray-600 hover:text-gray-900 bg-white border border-gray-300 rounded-full shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+          aria-label="Toggle menu"
+        >
+          <MoreVertical className="w-5 h-5" />
+        </button>
+
+        {showMenu && (
+          <div
+            className="absolute right-0 mt-2 bg-white border border-gray-200 rounded-lg shadow-2xl py-2 z-[99999] min-w-[140px] note-dropdown"
+            onClick={(e) => e.stopPropagation()}
           >
-            <MoreVertical className="w-4 h-4" />
-          </button>
-          {showMenu && (
-            <div className="absolute right-0 top-8 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-20">
-              <button
-                onClick={() => {
-                  onEdit(note);
-                  setShowMenu(false);
-                }}
-                className="flex items-center space-x-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 w-full text-left"
-              >
-                <Edit className="w-4 h-4" />
-                <span>Edit</span>
-              </button>
-              <button
-                onClick={handleDelete}
-                className="flex items-center space-x-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50 w-full text-left"
-              >
-                <Trash2 className="w-4 h-4" />
-                <span>Delete</span>
-              </button>
-            </div>
-          )}
-        </div>
+            <button
+              onClick={() => {
+                onEdit(note);
+                setShowMenu(false);
+              }}
+              className="flex items-center gap-2 px-4 py-2 w-full text-blue-700 bg-blue-50 hover:bg-blue-100 font-medium text-sm rounded transition"
+            >
+              <Edit className="w-4 h-4 text-blue-600" />
+              Edit
+            </button>
+            <button
+              onClick={handleDelete}
+              disabled={deleting}
+              className={clsx(
+                'flex items-center gap-2 px-4 py-2 w-full font-medium text-sm rounded transition',
+                deleting
+                  ? 'text-red-300 bg-red-50 cursor-not-allowed'
+                  : 'text-red-700 bg-red-50 hover:bg-red-100'
+              )}
+            >
+              <Trash2 className="w-4 h-4" />
+              {deleting ? 'Deleting...' : 'Delete'}
+            </button>
+          </div>
+        )}
       </div>
 
-      <p className="text-gray-700 text-sm leading-relaxed mb-4 relative z-10">
+      {/* Title */}
+      <h3 className="text-lg font-bold text-gray-900 mb-2 line-clamp-1 relative z-10">
+        {note.title}
+      </h3>
+
+      {/* Content */}
+      <p className="text-sm text-gray-700 leading-relaxed mb-4 relative z-10">
         {truncateContent(note.content)}
       </p>
 
+      {/* Footer */}
       <div className="flex items-center justify-between text-xs text-gray-600 relative z-10">
         <span>Updated {formatDate(note.updated_at)}</span>
         <button
           onClick={(e) => {
             e.stopPropagation();
-            onEdit(note);
+            navigate(`/notes/${note.id}`);
           }}
-          className="text-blue-600 hover:text-blue-700 font-medium"
+          className="text-white bg-blue-600 hover:bg-blue-700 px-3 py-1 text-xs font-semibold rounded shadow transition-colors"
         >
           Read more
         </button>
       </div>
-    </div>
-  );}
-
- // export default NoteCard;
+    </motion.div>
+  );
+}

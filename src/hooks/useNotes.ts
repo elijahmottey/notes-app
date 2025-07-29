@@ -10,6 +10,7 @@ export interface Note {
   created_at: string;
   updated_at: string;
   user_id: string;
+  //isNew={note.id === newestNoteId} 
 }
 
 export function useNotes() {
